@@ -1,5 +1,5 @@
 CAMLC=ocamlc
-CAMLOPT=ocamlopt -p
+CAMLOPT=ocamlopt -p -inline 4
 CAMLLEX=ocamllex
 CAMLDEP=ocamldep
 CAMLDOC=ocamldoc

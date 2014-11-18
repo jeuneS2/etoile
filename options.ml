@@ -32,10 +32,14 @@ let mpb_size = ref 16384
 let cache_size = ref 262144
 let cont = ref 18
 let verbose = ref false
+let hypers = ref 1
+let addoff = ref 0
 
 let options =
   [ "-out", Arg.Set_string outname, " Specifies the name for output files";
     "-d", Arg.Set_string outdir, " Specifies the directory for output files";
+	"-hypers", Arg.Set_int hypers, " Number of hyper periods to schedule (default: 1)";
+	"-addoff", Arg.Set_int addoff, " Additional hyperperiods at start of schedule (default: 0)";
 	"-maxcont", Arg.Set_int cont, " Maximum allowed contention (default: 18)";
 	"-cores", Arg.Set_int cores, " Number of cores (default: 48)";
 	"-tilecores", Arg.Set_int tile_cores, " Number of cores per tile (default: 2)";

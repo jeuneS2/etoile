@@ -135,8 +135,12 @@ let task_jobs jobs task =
 	jobs
 
 let job_conflict j k =
-  let r = min !(j.job_r') !(k.job_r')
-  and d = max !(j.job_d') !(k.job_d') in
+  let jr = !(j.job_r') and
+      kr = !(k.job_r') and
+      jd = !(j.job_d') and
+      kd = !(k.job_d') in
+  let r = if jr < kr then jr else kr (* min !(j.job_r') !(k.job_r') *)
+  and d = if jd > kd then jd else kd (* max !(j.job_d') !(k.job_d') *) in
   (j.job_task.wcet + k.job_task.wcet) > (d - r)
 
 let _conflict = Hashtbl.create 100
@@ -144,7 +148,6 @@ let conflict jobs t s =
   let id = (t.id, s.id) in
   try Hashtbl.find _conflict id
   with Not_found ->
-	if (Hashtbl.length _conflict) > 10000000 then Hashtbl.clear _conflict;
 	if (t.wcet > (s.period + s.deadline - 2 * s.wcet)
 		|| s.wcet > (t.period + t.deadline - 2 * t.wcet)) then
       begin
@@ -206,9 +209,12 @@ let dump out_f tasks deps buffers mapping =
   if util_ceil > max_cores then
     failwith "Task set not schedulable (not enough cores for utilization)";
 
-  let (maxoff,hyper) = 
-    List.fold_left (fun (o,p) t -> (max o t.offset, lcm p t.period)) (0, 1) tasks in
-  let hp = maxoff + hyper in
+  let (off,hyper) = 
+    List.fold_left (fun (o,p) t ->
+      (max o (t.offset + (max (t.deadline - t.period) 0)), 
+       lcm p t.period)) (0, 1) tasks in
+  let maxoff = off + !Options.addoff * hyper in
+  let hp = maxoff + !Options.hypers * hyper in
 
   let tasks = List.sort (fun t s -> compare (task_util s) (task_util t)) tasks in
 
@@ -223,24 +229,8 @@ let dump out_f tasks deps buffers mapping =
 
   refine_jobs jobs jobdeps;
 
-  (* let min_prod = ref (List.fold_left (fun r t ->  *)
-  (* 	r *. (float (t.wcet + 1))) *)
-  (* 	1.0 tasks) in *)
-  (* fprintf stderr "maximum min_prod: %f\n" !min_prod; *)
-  (* for i = maxoff to maxoff+hyper do *)
-  (* 	let crossing = List.fold_left (fun r j -> *)
-  (* 	  if !(j.job_r') < i && !(j.job_d') > i then j :: r else r) [] jobs in *)
-  (* 	let prod = List.fold_left (fun r j -> *)
-  (* 	  r *. (float ((min j.job_task.wcet (min (i - !(j.job_r')) (!(j.job_d') - i))) + 1))) *)
-  (* 	  1.0 crossing in *)
-  (* 	if prod < !min_prod then *)
-  (* 	  min_prod := prod; *)
-
-  (* 	fprintf stderr "prod[%d](%d): %f // %f\n" i (List.length crossing) prod !min_prod *)
-  (* done; *)
-
   fprintf out_f "maxOff = %d;\n" maxoff;
-  fprintf out_f "hyper = %d;\n" hyper;
+  fprintf out_f "hyper = %d;\n" (hp - maxoff);
 
   fprintf out_f "Tasks = {\n";
   List.iter (fun t -> fprintf out_f "  \"%s\",\n" t.name) tasks;
@@ -283,7 +273,7 @@ let dump out_f tasks deps buffers mapping =
   fprintf out_f "Hypers = {\n";
   List.iter (fun j -> 
     if !(j.job_r') < maxoff && !(j.job_d') > maxoff then
-      let l = List.find (fun l -> l.job_task.id = j.job_task.id && !(l.job_r') < hp && !(l.job_d') > hp) jobs in
+      let l = List.find (fun l -> l.job_task.id = j.job_task.id && !(l.job_r') < hp && !(l.job_d') > hp && l.job_r == (j.job_r + hp - maxoff)) jobs in
       fprintf out_f "<\"%s_%d\", \"%s_%d\">,\n"
         j.job_task.name j.job_id l.job_task.name l.job_id
   ) jobs;
@@ -324,9 +314,10 @@ let dump out_f tasks deps buffers mapping =
   let ord = ref [] in
   List.iter (fun j ->
     List.iter (fun k ->
-      if j.job_task.id < k.job_task.id
-		&& not (conflict jobs j.job_task k.job_task)
+      if (j.job_task.id < k.job_task.id 
+          || (j.job_task.id == k.job_task.id && j.job_id < k.job_id))
         && (overlap j k)
+		&& not (conflict jobs j.job_task k.job_task)
 		&& not (ordered jobdeps j k) then
 		begin
 		  if (before j k) || (equiv_subsets jobdeps j k) then
