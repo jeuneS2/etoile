@@ -1,0 +1,7 @@
+TFF-2.0
+# Task "Name" Period WCET Offset (Deadline)
+Task "t0" 2 1 0 (2) 0
+Task "t1" 2 1 0 (2) 0
+Task "t2" 4 3 0 (4) 0
+# Dependency "Src" "Dest" (SrcJob:DstJob)
+Dependency "t0" "t2" (1:0)

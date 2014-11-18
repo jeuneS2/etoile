@@ -22,3 +22,6 @@ Usage
 
 `etoile -cores $CORES -tilecores $TILECORES -mpbsize $MPBSIZE -cachesize $CACHESIZE -maxcont $MAXCONT $TASKSET.txt > $TASKSET.dat`
 `oplrun opl.mod $TASKSET.dat`
+
+For a description of the available options, use
+`etoile -help

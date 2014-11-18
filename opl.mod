@@ -102,8 +102,8 @@ execute {
 //    writeln("p(",t,") = ", p[t]);
 //  for (b in Bufs)
 //    writeln("m(",b,") = ", m[b]);
-//  for (j in Jobs)
-//    writeln("s(",j,") = ", s[j]);
+  for (j in Jobs)
+    writeln("s(",j,") = ", s[j]);
   writeln("n_cores = ", n_cores);
   writeln("n_cont = ", n_cont);
 }
